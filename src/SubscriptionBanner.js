@@ -4,6 +4,10 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react';
 export default function App() {
   const toteClipId = useId();
 
+  // ⚠️ CRITICAL FIX: Replace this with the EXACT, FULL URL of the page on your website where this is embedded.
+  // Example: "https://flydry.co.uk/services#subscription-plans"
+  const SCROLL_TARGET_URL = "https://flydry.co.uk/laundry-and-dry-clean-subscriptions#subscription-plans";
+
   const steps = useMemo(() => [
     {
       id: 'volume',
@@ -192,8 +196,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Added target="_parent" here to break out of the iframe */}
-            <a href="#subscription-plans" target="_parent" className="group inline-flex items-center w-max gap-3 bg-[#082219] text-[#C5A059] px-8 py-4 rounded-xl text-xs md:text-[13px] font-black uppercase tracking-widest hover:bg-[#C5A059] hover:text-[#082219] transition-all shadow-[0_8px_20px_rgba(8,34,25,0.2)] hover:shadow-[0_12px_24px_rgba(197,160,89,0.3)]">
+            <a href={SCROLL_TARGET_URL} target="_parent" className="group inline-flex items-center w-max gap-3 bg-[#082219] text-[#C5A059] px-8 py-4 rounded-xl text-xs md:text-[13px] font-black uppercase tracking-widest hover:bg-[#C5A059] hover:text-[#082219] transition-all shadow-[0_8px_20px_rgba(8,34,25,0.2)] hover:shadow-[0_12px_24px_rgba(197,160,89,0.3)]">
               Choose your plan
               <ArrowRight size={18} className="group-hover:translate-x-1.5 transition-transform" aria-hidden="true" />
             </a>
@@ -224,7 +227,7 @@ export default function App() {
               
               {steps.map((step) => (
                 <a 
-                  href="#subscription-plans"
+                  href={SCROLL_TARGET_URL}
                   target="_parent"
                   key={step.id}
                   role="listitem"
