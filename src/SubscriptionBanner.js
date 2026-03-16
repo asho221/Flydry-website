@@ -192,7 +192,8 @@ export default function App() {
               </div>
             </div>
 
-            <a href="#subscription-plans" className="group inline-flex items-center w-max gap-3 bg-[#082219] text-[#C5A059] px-8 py-4 rounded-xl text-xs md:text-[13px] font-black uppercase tracking-widest hover:bg-[#C5A059] hover:text-[#082219] transition-all shadow-[0_8px_20px_rgba(8,34,25,0.2)] hover:shadow-[0_12px_24px_rgba(197,160,89,0.3)]">
+            {/* Added target="_parent" here to break out of the iframe */}
+            <a href="#subscription-plans" target="_parent" className="group inline-flex items-center w-max gap-3 bg-[#082219] text-[#C5A059] px-8 py-4 rounded-xl text-xs md:text-[13px] font-black uppercase tracking-widest hover:bg-[#C5A059] hover:text-[#082219] transition-all shadow-[0_8px_20px_rgba(8,34,25,0.2)] hover:shadow-[0_12px_24px_rgba(197,160,89,0.3)]">
               Choose your plan
               <ArrowRight size={18} className="group-hover:translate-x-1.5 transition-transform" aria-hidden="true" />
             </a>
@@ -224,6 +225,7 @@ export default function App() {
               {steps.map((step) => (
                 <a 
                   href="#subscription-plans"
+                  target="_parent"
                   key={step.id}
                   role="listitem"
                   className="exec-card group flex flex-row md:flex-col items-center md:items-start p-6 md:p-8 rounded-[1.5rem] border border-gray-100 shadow-[0_4px_15px_rgba(0,0,0,0.02)] cursor-pointer overflow-hidden relative"
