@@ -9,6 +9,9 @@ export default function CommercialPartner() {
   // Duplicate for seamless infinite scrolling marquee
   const marqueeItems = [...industries, ...industries, ...industries];
 
+  // ⚠️ CRITICAL FIX: The absolute URL of your live commercial page + the contact form ID
+  const SCROLL_TARGET_URL = "https://flydry.co.uk/commercials#contact-us";
+
   return (
     <section className="relative w-full bg-[#fdfdfd] text-[#082219] py-16 md:py-32 overflow-hidden font-sans selection:bg-[#C5A059] selection:text-[#082219]">
       
@@ -164,8 +167,8 @@ export default function CommercialPartner() {
               </a>
 
               <a 
-                href="#contact-us" 
-                target="_parent"
+                href={SCROLL_TARGET_URL} 
+                target="_top"
                 className="group inline-flex items-center justify-center gap-2 bg-[#fdfdfd] border-2 border-gray-200 text-[#082219] px-6 py-3 rounded-xl text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:border-[#082219] transition-all shadow-sm w-full sm:w-auto"
               >
                 Contact Form
