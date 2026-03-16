@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import SubscriptionBanner from './SubscriptionBanner';
 import Commercials from './Commercials';
-import landingHero from './landingHero';
+import LandingHero from './LandingHero';
 
 export default function App() {
   return (
@@ -10,7 +10,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<SubscriptionBanner />} />
         <Route path="/commercials" element={<Commercials />} />
-        <Route path="/landinghero" element={<landingHero />} />
+        <Route path="/landinghero" element={<LandingHero />} />
       </Routes>
     </BrowserRouter>
   );
