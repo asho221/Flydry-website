@@ -4,9 +4,8 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react';
 export default function App() {
   const toteClipId = useId();
 
-  // ⚠️ CRITICAL: Copy the EXACT address from your live browser window and add #subscription-plans
-  // If your site uses "www.", you MUST include it here, otherwise it will reload the page instead of scrolling!
-  const SCROLL_TARGET_URL = "https://flydry.co.uk/laundry-and-dry-clean-subscriptions#subscription-plans";
+  // Since the widget is now in the same file, we just need the simple # anchor!
+  const SCROLL_TARGET_URL = "#subscription-plans";
 
   const steps = useMemo(() => [
     {
@@ -78,6 +77,7 @@ export default function App() {
 
   return (
     <div className="w-full bg-white">
+      {/* 1. THE SUBSCRIPTION HERO SECTION */}
       <section aria-labelledby="subscription-hero-heading" className="relative w-full bg-white text-[#082219] pt-16 pb-10 md:pt-20 md:pb-12 border-y border-gray-100 overflow-hidden font-sans selection:bg-[#C5A059] selection:text-white">
         
         <style dangerouslySetInnerHTML={{ __html: `
@@ -157,6 +157,11 @@ export default function App() {
           .exec-card:hover::before {
             opacity: 1;
           }
+          
+          /* Smooth scrolling behavior for the whole page */
+          html {
+            scroll-behavior: smooth;
+          }
         `}} />
 
         {/* Subtle Background Grid */}
@@ -196,7 +201,7 @@ export default function App() {
               </div>
             </div>
 
-            <a href={SCROLL_TARGET_URL} target="_top" className="group inline-flex items-center w-max gap-3 bg-[#082219] text-[#C5A059] px-8 py-4 rounded-xl text-xs md:text-[13px] font-black uppercase tracking-widest hover:bg-[#C5A059] hover:text-[#082219] transition-all shadow-[0_8px_20px_rgba(8,34,25,0.2)] hover:shadow-[0_12px_24px_rgba(197,160,89,0.3)]">
+            <a href={SCROLL_TARGET_URL} className="group inline-flex items-center w-max gap-3 bg-[#082219] text-[#C5A059] px-8 py-4 rounded-xl text-xs md:text-[13px] font-black uppercase tracking-widest hover:bg-[#C5A059] hover:text-[#082219] transition-all shadow-[0_8px_20px_rgba(8,34,25,0.2)] hover:shadow-[0_12px_24px_rgba(197,160,89,0.3)]">
               Choose your plan
               <ArrowRight size={18} className="group-hover:translate-x-1.5 transition-transform" aria-hidden="true" />
             </a>
@@ -228,7 +233,6 @@ export default function App() {
               {steps.map((step) => (
                 <a 
                   href={SCROLL_TARGET_URL}
-                  target="_top"
                   key={step.id}
                   role="listitem"
                   className="exec-card group flex flex-row md:flex-col items-center md:items-start p-6 md:p-8 rounded-[1.5rem] border border-gray-100 shadow-[0_4px_15px_rgba(0,0,0,0.02)] cursor-pointer overflow-hidden relative"
@@ -255,6 +259,31 @@ export default function App() {
 
         </div>
       </section>
+
+      {/* 2. THE SUBSCRIPTION WIDGET EMBED (Your pasted code) */}
+      <div 
+        id="subscription-plans" 
+        style={{ 
+          position: 'relative', 
+          left: '50%', 
+          right: '50%', 
+          marginLeft: '-50vw', 
+          marginRight: '-50vw', 
+          width: '100vw', 
+          maxWidth: '100vw',
+          backgroundColor: '#fdfdfd' // matches page background cleanly
+        }}
+      >
+        <iframe 
+          style={{ border: 'none', borderRadius: '8px', display: 'block' }} 
+          src="https://flydry-subscription.vercel.app" 
+          width="100%" 
+          height="1050px" 
+          frameBorder="0"
+          title="FlyDry Subscription Plans"
+        ></iframe>
+      </div>
+
     </div>
   );
 }
