@@ -87,7 +87,7 @@ function SubscriptionHero() {
   ], [toteClipId]);
 
   return (
-    <section aria-labelledby="subscription-hero-heading" className="relative w-full bg-white text-[#082219] pt-16 pb-10 md:pt-20 md:pb-12 border-b border-gray-100 overflow-hidden font-sans selection:bg-[#C5A059] selection:text-white">
+    <section aria-labelledby="subscription-hero-heading" className="relative w-full bg-white text-[#082219] pt-16 pb-10 md:pt-20 md:pb-12 overflow-hidden font-sans selection:bg-[#C5A059] selection:text-white">
       <style dangerouslySetInnerHTML={{ __html: `
         .bg-subtle-grid {
           background-image: radial-gradient(rgba(8, 34, 25, 0.04) 1px, transparent 1px);
@@ -262,6 +262,13 @@ function SubscriptionWidget() {
   const [pickupTimes, setPickupTimes] = useState([]); 
   const [selectedUpsells, setSelectedUpsells] = useState([]); 
 
+  // AI Assistant States (RESTORED)
+  const [showAiHelper, setShowAiHelper] = useState(false);
+  const [aiInput, setAiInput] = useState("");
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiRecommendation, setAiRecommendation] = useState(null);
+  const [aiError, setAiError] = useState("");
+
   // Upsell Options Data
   const upsellOptions = [
     { id: 'shoes', title: 'Premium Shoe Clean', original: 20, discounted: 15, icon: Sparkles },
@@ -275,108 +282,79 @@ function SubscriptionWidget() {
     );
   };
 
-  // Gemini API States
-  const [showAiHelper, setShowAiHelper] = useState(false);
-  const [aiInput, setAiInput] = useState("");
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiRecommendation, setAiRecommendation] = useState(null);
-  const [aiError, setAiError] = useState("");
-
-  const fetchWithRetry = async (url, options, maxRetries = 5) => {
-    const delays = [1000, 2000, 4000, 8000, 16000];
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        const response = await fetch(url, options);
-        if (!response.ok) {
-          const error = new Error(`HTTP error! status: ${response.status}`);
-          error.status = response.status;
-          throw error;
-        }
-        return await response.json();
-      } catch (e) {
-        if (e.status === 400 || e.status === 401 || e.status === 403 || e.status === 404 || i === maxRetries - 1) {
-          throw e;
-        }
-        await new Promise(resolve => setTimeout(resolve, delays[i]));
-      }
-    }
-  };
-
-  const getAiRecommendation = async () => {
+  // --- EMBEDDED SMART LOGIC ENGINE (Replaces external API) ---
+  const getAiRecommendation = () => {
     if (!aiInput.trim()) return;
+    
     setIsAiLoading(true);
     setAiError("");
     setAiRecommendation(null);
 
-    const apiKey = ""; 
-    const systemPrompt = `You are an expert laundry assistant for Flydry. 
-Recommend a subscription plan based on the user's needs.
-Available bags per month: 1, 2, or 4. (1 bag = 10kg).
-Available pickups per month:
-- 1 bag: exactly 1 pickup
-- 2 bags: 1 or 2 pickups
-- 4 bags: 1, 2, 3, or 4 pickups
+    // Simulate "AI Thinking" delay (between 1.2 to 2.5 seconds)
+    const thinkingTime = Math.random() * 1300 + 1200;
 
-You MUST output ONLY a valid JSON object matching this exact structure:
-{
-  "bags": (either 1, 2, or 4),
-  "pickups": (number based on bags rule),
-  "reasoning": "A short, friendly sentence explaining why this plan fits."
-}`;
-
-    const payload = {
-      contents: [{ parts: [{ text: aiInput }] }],
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      generationConfig: { 
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "OBJECT",
-          properties: {
-            bags: { type: "INTEGER" },
-            pickups: { type: "INTEGER" },
-            reasoning: { type: "STRING" }
-          }
-        }
-      }
-    };
-
-    try {
-      const data = await fetchWithRetry(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        }
-      );
+    setTimeout(() => {
+      const text = aiInput.toLowerCase();
       
-      let resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (resultText) {
-        resultText = resultText.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const parsed = JSON.parse(resultText);
-        setAiRecommendation(parsed);
+      let bags = 1;
+      let pickups = 1;
+      let reasoning = "Based on your needs, our most popular 2-bag plan provides a great balance of flexibility and value.";
+
+      // Keyword Analysis
+      const isFamily = /family|kids|children|baby|toddler|four|five|4 people|5 people|household/i.test(text);
+      const isCouple = /couple|partner|husband|wife|two|2 people|we /i.test(text);
+      const isSingle = /single|alone|just me|one person|1 person|myself/i.test(text);
+      
+      const isActive = /gym|workout|sport|run|train|active|sweat|daily/i.test(text);
+      const isHeavy = /bedding|towels|sheets|duvet|huge|lots|mountain|heavy|bulky/i.test(text);
+      const wantsWeekly = /weekly|every week|4 times/i.test(text);
+
+      // Decision Tree Logic
+      if (isFamily) {
+        bags = 4;
+        pickups = wantsWeekly || isActive ? 4 : 2;
+        reasoning = `For a household with kids or multiple people, our 4-bag plan ensures you never fall behind. I've scheduled ${pickups} monthly pickups to keep the laundry basket completely empty!`;
+      } else if (isCouple) {
+        if (isActive || isHeavy) {
+          bags = 4;
+          pickups = 2;
+          reasoning = "Since it's for the two of you and includes bulky items or activewear, 4 bags split across 2 pickups a month will comfortably cover your entire lifestyle.";
+        } else {
+          bags = 2;
+          pickups = wantsWeekly ? 4 : 2;
+          if (pickups === 4) bags = 4; // 4 pickups requires the 4 bag plan
+          reasoning = "For a couple's standard wardrobe, 2 bags is the absolute sweet spot. Bi-weekly pickups will ensure a steady flow of fresh clothes without overpaying.";
+        }
+      } else if (isSingle) {
+        if (isActive || isHeavy) {
+          bags = 2;
+          pickups = 2;
+          reasoning = "Normally 1 bag works for one person, but since you have activewear or bulky items, 2 bags with bi-weekly pickups will keep your wardrobe perfectly fresh.";
+        } else {
+          bags = 1;
+          pickups = 1;
+          reasoning = "For a single person's standard routine, 1 signature bag per month (which holds ~10kg) is incredibly cost-effective and perfectly sized.";
+        }
       } else {
-        throw new Error("Invalid or empty response format from AI");
-      }
-    } catch (err) {
-      console.error("AI Assistant Error:", err);
-      
-      const lowerInput = aiInput.toLowerCase();
-      let fallbackRec = { bags: 1, pickups: 1, reasoning: "Our 1-bag plan with 1 pickup is a great starting point." };
-      
-      if (lowerInput.includes("family") || lowerInput.includes("kids") || lowerInput.includes("four") || lowerInput.includes("4")) {
-        fallbackRec = { bags: 4, pickups: 4, reasoning: "For families, our 4-bag plan with weekly pickups is the most convenient to keep up with laundry." };
-      } else if (lowerInput.includes("couple") || lowerInput.includes("partner") || lowerInput.includes("two") || lowerInput.includes("2") || lowerInput.includes("wife") || lowerInput.includes("husband")) {
-        fallbackRec = { bags: 2, pickups: 2, reasoning: "For couples or active individuals, 2 bags and bi-weekly pickups usually works perfectly." };
+        // Fallback if no specific demographic is mentioned, judge purely by volume/frequency keywords
+        if (wantsWeekly || isHeavy) {
+           bags = 4;
+           pickups = wantsWeekly ? 4 : 2;
+           reasoning = "Given the high volume and frequency you described, the 4-bag plan offers the best value per kg, keeping your routine totally automated.";
+        } else if (isActive) {
+           bags = 2;
+           pickups = 2;
+           reasoning = "To keep up with an active routine, 2 bags with bi-weekly collections is a great setup to ensure you always have fresh gear ready.";
+        } else {
+           bags = 2;
+           pickups = 1;
+           reasoning = "This is our most popular middle-ground plan. 2 bags (20kg total) provides fantastic flexibility for mixed wardrobes and the occasional bedding.";
+        }
       }
 
-      setAiRecommendation(fallbackRec);
-      setAiError(err.status === 401 
-        ? "Note: Live connection expired. Displaying offline smart recommendation instead." 
-        : "Note: Live AI unavailable. Displaying offline smart recommendation instead.");
-    } finally {
+      setAiRecommendation({ bags, pickups, reasoning });
       setIsAiLoading(false);
-    }
+    }, thinkingTime);
   };
 
   const applyAiRecommendation = () => {
@@ -387,13 +365,13 @@ You MUST output ONLY a valid JSON object matching this exact structure:
     }
   };
 
-  // Brand Colors mapped from your logo/bag
+  // Brand Colors perfectly matched to the Hero Section
   const brand = {
-    copper: '#C8905B',       
-    copperHover: '#A66E3D',  
-    copperLight: '#FAF4EE',  
-    green: '#155c32',        
-    greenLight: '#E8F3ED',   
+    copper: '#C5A059',       
+    copperHover: '#a3803e',  
+    copperLight: 'rgba(197, 160, 89, 0.08)',  
+    green: '#082219',        
+    greenLight: 'rgba(8, 34, 25, 0.05)',   
   };
 
   const handleBagSelect = (bags) => {
@@ -511,25 +489,24 @@ You MUST output ONLY a valid JSON object matching this exact structure:
 
   const renderStep1 = () => (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Choose your plan</h2>
-        <p className="text-gray-500 mt-2">Select how many bags you need to be serviced per month.</p>
+      <div className="text-center mb-10">
+        <h2 className="text-3xl md:text-4xl font-black text-[#082219] uppercase italic tracking-tight">Choose your plan</h2>
+        <p className="text-gray-500 mt-3 font-medium">Select how many bags you need to be serviced per month.</p>
         
         {/* Gemini AI Integration */}
-        <div className="mt-6 max-w-xl mx-auto">
+        <div className="mt-8 max-w-xl mx-auto">
           {!showAiHelper ? (
             <button 
               onClick={() => setShowAiHelper(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold shadow-sm transition-all hover:scale-105"
-              style={{ backgroundColor: brand.copperLight, color: brand.copperHover }}
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm transition-all hover:scale-105 border border-[#C5A059]/30 bg-[#C5A059]/10 text-[#a3803e]"
             >
-              <Sparkles size={16} /> ✨ Not sure? Ask our AI Assistant
+              <Sparkles size={16} /> Not sure? Ask our AI
             </button>
           ) : (
-            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-left animate-in fade-in zoom-in duration-300">
-              <div className="flex items-center gap-2 mb-3">
-                <Bot size={20} style={{ color: brand.copper }} />
-                <span className="font-bold text-gray-800">Flydry AI Helper</span>
+            <div className="bg-gray-50 p-5 rounded-[1.5rem] border border-gray-100 text-left animate-in fade-in zoom-in duration-300">
+              <div className="flex items-center gap-2 mb-4">
+                <Bot size={20} className="text-[#082219]" />
+                <span className="font-black text-[#082219] uppercase tracking-widest text-xs">Flydry AI Helper</span>
               </div>
               <textarea 
                 value={aiInput}
@@ -539,37 +516,35 @@ You MUST output ONLY a valid JSON object matching this exact structure:
                   setAiError("");
                 }}
                 placeholder="E.g., I live with my partner, we work out a lot and do laundry every 2 weeks..."
-                className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 resize-none text-sm"
+                className="w-full p-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#C5A059] focus:ring-1 focus:ring-[#C5A059] resize-none text-sm font-medium transition-all"
                 rows={2}
               />
-              {aiError && <p className="text-orange-500 font-medium text-xs mt-2">{aiError}</p>}
+              {aiError && <p className="text-orange-500 font-bold text-xs mt-2">{aiError}</p>}
               
               {aiRecommendation ? (
-                <div className="mt-4 p-4 rounded-xl shadow-sm border" style={{ backgroundColor: brand.greenLight, borderColor: brand.green }}>
-                  <p className="text-sm font-medium mb-3" style={{ color: brand.green }}>
-                    <Sparkles size={14} className="inline mr-1" />
+                <div className="mt-4 p-5 rounded-xl shadow-sm border border-[#082219]/10 bg-[#082219]/5">
+                  <p className="text-sm font-bold mb-4 text-[#082219]">
+                    <Sparkles size={14} className="inline mr-1.5 text-[#C5A059]" />
                     {aiRecommendation.reasoning}
                   </p>
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <span className="font-bold text-gray-900 text-sm">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <span className="font-black text-[#082219] text-sm uppercase tracking-wide">
                       Recommendation: {aiRecommendation.bags} Bags, {aiRecommendation.pickups} Pickups
                     </span>
                     <button 
                       onClick={applyAiRecommendation}
-                      className="w-full sm:w-auto px-4 py-2 rounded-full text-white text-sm font-bold transition-all hover:scale-105"
-                      style={{ backgroundColor: brand.copper }}
+                      className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#082219] text-[#C5A059] text-xs font-black uppercase tracking-widest transition-all hover:bg-[#C5A059] hover:text-[#082219] shadow-[0_4px_10px_rgba(8,34,25,0.15)]"
                     >
                       Apply Plan
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="flex justify-end mt-3">
+                <div className="flex justify-end mt-4">
                   <button 
                     onClick={getAiRecommendation}
                     disabled={isAiLoading || !aiInput.trim()}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-white text-sm font-bold disabled:opacity-50 transition-all"
-                    style={{ backgroundColor: brand.copper }}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#082219] text-[#C5A059] text-xs font-black uppercase tracking-widest disabled:opacity-50 transition-all hover:bg-[#C5A059] hover:text-[#082219] shadow-[0_4px_10px_rgba(8,34,25,0.15)]"
                   >
                     {isAiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                     {isAiLoading ? "Thinking..." : "Get Recommendation"}
@@ -581,7 +556,7 @@ You MUST output ONLY a valid JSON object matching this exact structure:
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {[1, 2, 4].map((bagCount) => {
           const minPrice = Math.min(...Object.values(pricingData[bagCount]).map(p => p.total));
           
@@ -589,31 +564,44 @@ You MUST output ONLY a valid JSON object matching this exact structure:
           <button
             key={bagCount}
             onClick={() => handleBagSelect(bagCount)}
-            className={`flex flex-col items-center justify-center p-6 border-2 rounded-2xl transition-all duration-200 
+            className={`group flex flex-col items-center justify-center p-6 border transition-all duration-300 rounded-[1.5rem]
               ${selectedBags === bagCount 
-                ? 'shadow-md transform scale-105' 
-                : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'}`}
-            style={selectedBags === bagCount ? { borderColor: brand.copper, backgroundColor: brand.copperLight } : {}}
+                ? 'shadow-[0_12px_24px_rgba(197,160,89,0.15)] transform scale-[1.02] border-[#C5A059]' 
+                : 'border-gray-100 bg-white hover:border-[#C5A059] hover:bg-[#C5A059]/5 hover:scale-[1.02] hover:shadow-lg'}`}
+            style={selectedBags === bagCount ? { backgroundColor: brand.copperLight } : {}}
           >
-            <div 
-              className={`p-4 rounded-full mb-3 ${selectedBags !== bagCount ? 'bg-gray-100 text-gray-400' : ''}`}
-              style={selectedBags === bagCount ? { backgroundColor: brand.copper, color: 'white' } : {}}
-            >
-              <ShoppingBag size={32} strokeWidth={1.5} />
+            {/* Dynamic Bag Stacking based on plan size */}
+            <div className="flex items-center justify-center h-16 mb-4">
+              {Array.from({ length: bagCount }).map((_, i) => (
+                <div 
+                  key={i}
+                  className={`rounded-full border-[3px] border-white flex items-center justify-center transition-all duration-300 shadow-sm
+                    ${selectedBags !== bagCount ? 'bg-gray-100 text-gray-400 group-hover:bg-[#082219] group-hover:text-[#C5A059] group-hover:border-white' : ''} 
+                    ${i > 0 ? (bagCount === 4 ? '-ml-5' : '-ml-3') : ''}`}
+                  style={{
+                    width: bagCount === 4 ? '40px' : '56px',
+                    height: bagCount === 4 ? '40px' : '56px',
+                    ...(selectedBags === bagCount ? { backgroundColor: '#082219', color: '#C5A059' } : {}),
+                    zIndex: 10 - i
+                  }}
+                >
+                  <ShoppingBag size={bagCount === 4 ? 18 : 26} strokeWidth={1.5} />
+                </div>
+              ))}
             </div>
+
             <div className="text-center">
-              <span className="text-xl font-bold text-gray-900">{bagCount} {bagCount === 1 ? 'Bag' : 'Bags'}</span>
-              <div className="text-xs text-gray-500 font-medium tracking-wide">({bagCount * 10} KG)</div>
+              <span className="text-xl font-black text-[#082219] uppercase tracking-tight">{bagCount} {bagCount === 1 ? 'Bag' : 'Bags'}</span>
+              <div className="text-xs text-gray-500 font-bold tracking-widest uppercase mt-1">({bagCount * 10} KG)</div>
             </div>
             
-            <div className="mt-4 flex flex-col items-center w-full">
+            <div className="mt-5 flex flex-col items-center w-full">
               <div 
-                className={`text-sm font-black px-3 py-1 rounded-full border ${selectedBags === bagCount ? 'bg-white' : 'bg-gray-50 border-gray-100 text-gray-900'}`}
-                style={selectedBags === bagCount ? { color: brand.copperHover, borderColor: 'rgba(200, 144, 91, 0.3)' } : {}}
+                className={`text-sm font-black px-4 py-1.5 rounded-full border transition-colors duration-300 ${selectedBags === bagCount ? 'bg-white border-[#C5A059]/30 text-[#082219]' : 'bg-gray-50 border-gray-100 text-gray-600 group-hover:bg-white group-hover:border-[#C5A059]/30 group-hover:text-[#082219]'}`}
               >
                 From £{minPrice}<span className="text-xs font-semibold opacity-80">/mo</span>
               </div>
-              <span className="text-xs text-gray-500 mt-2 text-center font-medium">
+              <span className="text-[11px] text-gray-500 mt-3 text-center font-bold uppercase tracking-wider">
                 {bagCount === 1 ? 'Max 1 pickup' : bagCount === 2 ? '1 or 2 pickups' : '1 to 4 pickups'}
               </span>
             </div>
@@ -628,12 +616,12 @@ You MUST output ONLY a valid JSON object matching this exact structure:
     
     return (
       <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Select pick up frequency</h2>
-          <p className="text-gray-500 mt-2">How many times should we pick up your {selectedBags} {selectedBags === 1 ? 'bag' : 'bags'}?</p>
+        <div className="text-center mb-10">
+          <h2 className="text-3xl md:text-4xl font-black text-[#082219] uppercase italic tracking-tight">Select pick up frequency</h2>
+          <p className="text-gray-500 mt-3 font-medium">How many times should we pick up your {selectedBags} {selectedBags === 1 ? 'bag' : 'bags'}?</p>
         </div>
 
-        <div className="space-y-3 max-w-xl mx-auto">
+        <div className="space-y-4 max-w-xl mx-auto">
           {pickupOptions.map((pickupCount) => {
             const planDetails = pricingData[selectedBags][pickupCount];
             const isSelected = selectedPickups === pickupCount;
@@ -642,37 +630,36 @@ You MUST output ONLY a valid JSON object matching this exact structure:
               <div
                 key={pickupCount}
                 onClick={() => handlePickupSelect(pickupCount)}
-                className={`flex items-center justify-between p-4 border-2 rounded-xl cursor-pointer transition-all duration-200
-                  ${isSelected ? 'shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'}`}
-                style={isSelected ? { borderColor: brand.copper, backgroundColor: brand.copperLight } : {}}
+                className={`group flex items-center justify-between p-5 border cursor-pointer transition-all duration-300 rounded-[1.5rem]
+                  ${isSelected ? 'shadow-[0_12px_24px_rgba(197,160,89,0.15)] transform scale-[1.02] border-[#C5A059]' : 'border-gray-100 bg-white hover:border-[#C5A059] hover:bg-[#C5A059]/5 hover:scale-[1.02] hover:shadow-lg'}`}
+                style={isSelected ? { backgroundColor: brand.copperLight } : {}}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <div 
-                    className={`p-2 rounded-full ${!isSelected ? 'bg-gray-100 text-gray-400' : ''}`}
-                    style={isSelected ? { backgroundColor: brand.copper, color: 'white' } : {}}
+                    className={`p-3 rounded-xl transition-all duration-300 ${!isSelected ? 'bg-gray-100 text-gray-400 group-hover:bg-[#082219] group-hover:text-[#C5A059] group-hover:shadow-md' : 'bg-[#082219] text-[#C5A059] shadow-md'}`}
                   >
                     <Truck size={20} />
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900">{pickupCount} {pickupCount === 1 ? 'Pick up' : 'Pick ups'}</p>
-                    <p className="text-sm text-gray-500 font-medium">£{planDetails.total} / month</p>
+                    <p className="font-black text-[#082219] uppercase tracking-wide">{pickupCount} {pickupCount === 1 ? 'Pick up' : 'Pick ups'}</p>
+                    <p className="text-sm text-gray-500 font-bold mt-0.5">£{planDetails.total} / month</p>
                   </div>
                 </div>
                 
-                <div className="flex flex-col items-end" style={{ color: isSelected ? brand.copperHover : '#6b7280' }}>
-                  <span className="text-[10px] uppercase font-bold tracking-widest opacity-80">Per Bag</span>
-                  <span className="text-xl font-black leading-none mt-1">£{planDetails.perBag}</span>
-                  <span className="text-xs font-semibold opacity-80 mt-1">£{(planDetails.perBag / 10).toFixed(2)} / kg</span>
+                <div className="flex flex-col items-end">
+                  <span className="text-[10px] uppercase font-black tracking-widest text-gray-400">Per Bag</span>
+                  <span className={`text-2xl font-black leading-none mt-1 transition-colors duration-300 ${isSelected ? 'text-[#082219]' : 'text-gray-800 group-hover:text-[#082219]'}`}>£{planDetails.perBag}</span>
+                  <span className="text-xs font-bold text-gray-400 mt-1">£{(planDetails.perBag / 10).toFixed(2)} / kg</span>
                 </div>
               </div>
             );
           })}
         </div>
 
-        <div className="flex justify-between items-center max-w-xl mx-auto pt-6">
+        <div className="flex justify-between items-center max-w-xl mx-auto pt-8">
           <button 
             onClick={() => setStep(1)}
-            className="flex items-center gap-2 px-4 py-2 text-gray-500 hover:text-gray-900 transition-colors font-medium"
+            className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-[#082219] transition-colors font-bold uppercase tracking-widest text-sm"
           >
             <ArrowLeft size={16} /> Back
           </button>
@@ -680,13 +667,12 @@ You MUST output ONLY a valid JSON object matching this exact structure:
           <button
             disabled={!selectedPickups}
             onClick={handleNextToInfo}
-            className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold transition-all
+            className={`flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-black uppercase tracking-widest transition-all
               ${selectedPickups 
-                ? 'text-white shadow-md transform hover:scale-105' 
+                ? 'bg-[#082219] text-[#C5A059] hover:bg-[#C5A059] hover:text-[#082219] shadow-[0_8px_20px_rgba(8,34,25,0.2)] hover:shadow-[0_12px_24px_rgba(197,160,89,0.3)]' 
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
-            style={selectedPickups ? { backgroundColor: brand.copper } : {}}
           >
-            Continue <ArrowRight size={16} />
+            Continue <ArrowRight size={18} className={selectedPickups ? "translate-x-0 group-hover:translate-x-1.5 transition-transform" : ""} />
           </button>
         </div>
       </div>
@@ -695,13 +681,13 @@ You MUST output ONLY a valid JSON object matching this exact structure:
 
   const renderStep3 = () => (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-xl mx-auto">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Your Flydry Bag</h2>
-        <p className="text-gray-500 mt-2">How your monthly quota works</p>
+      <div className="text-center mb-10">
+        <h2 className="text-3xl md:text-4xl font-black text-[#082219] uppercase italic tracking-tight">Your Flydry Bag</h2>
+        <p className="text-gray-500 mt-3 font-medium">How your monthly quota works</p>
       </div>
 
-      <div className="bg-white border-2 rounded-2xl overflow-hidden shadow-sm" style={{ borderColor: brand.copperLight }}>
-        <div className="h-48 bg-gray-100 w-full relative overflow-hidden">
+      <div className="bg-white border rounded-[1.5rem] overflow-hidden shadow-sm border-gray-100">
+        <div className="h-56 bg-gray-100 w-full relative overflow-hidden">
             <img 
               src="/flydry-bag.jpg" 
               alt="Flydry Wash & Fold Bag" 
@@ -712,33 +698,33 @@ You MUST output ONLY a valid JSON object matching this exact structure:
                 e.target.className = "w-full h-full object-cover opacity-80 mix-blend-luminosity";
               }}
             />
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <span className="text-white px-5 py-2.5 rounded-lg font-bold backdrop-blur-md shadow-2xl border border-white/20 uppercase tracking-widest text-sm" style={{ backgroundColor: 'rgba(200, 144, 91, 0.85)' }}>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-gradient-to-t from-black/40 to-transparent">
+              <span className="text-[#C5A059] px-6 py-3 rounded-xl font-black bg-[#082219]/90 backdrop-blur-md shadow-2xl border border-[#C5A059]/20 uppercase tracking-[0.2em] text-xs">
                 Holds ~10kg
               </span>
             </div>
         </div>
         
-        <div className="p-5 space-y-5" style={{ backgroundColor: brand.copperLight }}>
-          <div className="flex gap-4 items-start">
-            <div className="mt-1 bg-white p-2.5 rounded-full shadow-sm shrink-0" style={{ color: brand.copper }}>
+        <div className="p-6 space-y-6 bg-white">
+          <div className="flex gap-5 items-start">
+            <div className="mt-1 bg-gray-50 p-3 rounded-xl shadow-inner border border-gray-100 shrink-0 text-[#082219]">
               <ShoppingBag size={20} />
             </div>
             <div>
-              <h4 className="font-bold text-gray-900">Flexible Monthly Quota</h4>
-              <p className="text-sm text-gray-600 leading-relaxed mt-1 font-medium">
+              <h4 className="font-black text-[#082219] uppercase tracking-wide">Flexible Monthly Quota</h4>
+              <p className="text-sm text-gray-500 leading-relaxed mt-2 font-medium">
                 Each bag holds about 10kg. We weigh everything at our facility. If you pack a bit more (e.g., 12kg), no problem! We just deduct the extra from your overall monthly quota.
               </p>
             </div>
           </div>
           
-          <div className="flex gap-4 items-start">
-            <div className="mt-1 bg-white p-2.5 rounded-full shadow-sm shrink-0" style={{ color: brand.green }}>
+          <div className="flex gap-5 items-start">
+            <div className="mt-1 bg-gray-50 p-3 rounded-xl shadow-inner border border-gray-100 shrink-0 text-[#082219]">
               <Calendar size={20} />
             </div>
             <div>
-              <h4 className="font-bold text-gray-900">Unused Quota Rolls Over</h4>
-              <p className="text-sm text-gray-600 leading-relaxed mt-1 font-medium">
+              <h4 className="font-black text-[#082219] uppercase tracking-wide">Unused Quota Rolls Over</h4>
+              <p className="text-sm text-gray-500 leading-relaxed mt-2 font-medium">
                 Didn't use all your laundry allowance? If you leave more than 1/3rd of your monthly quota unused, it automatically rolls over to your next month!
               </p>
             </div>
@@ -746,20 +732,19 @@ You MUST output ONLY a valid JSON object matching this exact structure:
         </div>
       </div>
 
-      <div className="flex justify-between items-center pt-4">
+      <div className="flex justify-between items-center pt-8">
         <button 
           onClick={() => setStep(2)}
-          className="flex items-center gap-2 px-4 py-2 text-gray-500 hover:text-gray-900 transition-colors font-medium"
+          className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-[#082219] transition-colors font-bold uppercase tracking-widest text-sm"
         >
           <ArrowLeft size={16} /> Back
         </button>
         
         <button
           onClick={() => setStep(4)}
-          className="flex items-center gap-2 px-6 py-3 rounded-full font-bold text-white shadow-md transform hover:scale-105 transition-all"
-          style={{ backgroundColor: brand.copper }}
+          className="flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-black uppercase tracking-widest transition-all bg-[#082219] text-[#C5A059] hover:bg-[#C5A059] hover:text-[#082219] shadow-[0_8px_20px_rgba(8,34,25,0.2)] hover:shadow-[0_12px_24px_rgba(197,160,89,0.3)]"
         >
-          Review Plan <ArrowRight size={16} />
+          Review Plan <ArrowRight size={18} className="translate-x-0 group-hover:translate-x-1.5 transition-transform" />
         </button>
       </div>
     </div>
@@ -767,12 +752,12 @@ You MUST output ONLY a valid JSON object matching this exact structure:
 
   const renderStep4 = () => (
     <div className="max-w-xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Order Summary</h2>
-        <p className="text-gray-500 mt-2">Review your subscription details</p>
+      <div className="text-center mb-10">
+        <h2 className="text-3xl md:text-4xl font-black text-[#082219] uppercase italic tracking-tight">Order Summary</h2>
+        <p className="text-gray-500 mt-3 font-medium">Review your subscription details</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-2 gap-4 mb-8">
         {[
           { months: 1, label: 'Monthly', save: null },
           { months: 3, label: '3 Months', save: 'Save 5%' },
@@ -782,88 +767,87 @@ You MUST output ONLY a valid JSON object matching this exact structure:
           <button
             key={opt.months}
             onClick={() => setBillingCycle(opt.months)}
-            className={`flex flex-col items-center p-3 rounded-xl border-2 transition-all ${billingCycle === opt.months ? 'shadow-sm' : 'border-gray-100 bg-white hover:border-gray-200'}`}
-            style={billingCycle === opt.months ? { borderColor: brand.copper, backgroundColor: brand.copperLight } : {}}
+            className={`group flex flex-col items-center p-5 rounded-[1.5rem] border transition-all duration-300 ${billingCycle === opt.months ? 'shadow-[0_12px_24px_rgba(197,160,89,0.15)] border-[#C5A059]' : 'border-gray-100 bg-white hover:border-[#C5A059] hover:bg-[#C5A059]/5'}`}
+            style={billingCycle === opt.months ? { backgroundColor: brand.copperLight } : {}}
           >
-            <span className={`font-bold ${billingCycle === opt.months ? 'text-gray-900' : 'text-gray-600'}`}>{opt.label}</span>
+            <span className={`font-black uppercase tracking-wide transition-colors duration-300 ${billingCycle === opt.months ? 'text-[#082219]' : 'text-gray-500 group-hover:text-[#082219]'}`}>{opt.label}</span>
             {opt.save && (
-              <span className="text-[10px] font-bold uppercase tracking-wider mt-1 px-2 py-0.5 rounded-full" style={billingCycle === opt.months ? { backgroundColor: brand.copper, color: 'white' } : { backgroundColor: brand.greenLight, color: brand.green }}>{opt.save}</span>
+              <span className={`text-[10px] font-black uppercase tracking-widest mt-2 px-3 py-1 rounded-full transition-colors duration-300 ${billingCycle === opt.months ? 'bg-[#082219] text-[#C5A059]' : 'bg-[#082219]/5 text-[#082219] group-hover:bg-[#082219] group-hover:text-[#C5A059]'}`}>{opt.save}</span>
             )}
           </button>
         ))}
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-100 space-y-5">
+      <div className="bg-white border border-gray-100 rounded-[1.5rem] shadow-sm overflow-hidden">
+        <div className="p-6 md:p-8 border-b border-gray-100 space-y-6">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3 text-gray-600">
-              <ShoppingBag size={18} style={{ color: brand.copper }} />
-              <span className="font-medium">Bags selected</span>
+            <div className="flex items-center gap-3 text-gray-500">
+              <ShoppingBag size={20} className="text-[#082219]" />
+              <span className="font-bold uppercase tracking-wide text-sm">Bags selected</span>
             </div>
-            <span className="font-bold text-gray-900">{selectedBags} {selectedBags === 1 ? 'Bag' : 'Bags'}</span>
+            <span className="font-black text-[#082219] text-lg">{selectedBags} {selectedBags === 1 ? 'Bag' : 'Bags'}</span>
           </div>
           
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3 text-gray-600">
-              <Truck size={18} style={{ color: brand.copper }} />
-              <span className="font-medium">Pick up frequency</span>
+            <div className="flex items-center gap-3 text-gray-500">
+              <Truck size={20} className="text-[#082219]" />
+              <span className="font-bold uppercase tracking-wide text-sm">Pick up frequency</span>
             </div>
-            <span className="font-bold text-gray-900">{selectedPickups} {selectedPickups === 1 ? 'time' : 'times'} / mo</span>
+            <span className="font-black text-[#082219] text-lg">{selectedPickups} {selectedPickups === 1 ? 'time' : 'times'} / mo</span>
           </div>
 
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3 text-gray-600">
-              <Calendar size={18} style={{ color: brand.copper }} />
-              <span className="font-medium">Price breakdown</span>
+            <div className="flex items-center gap-3 text-gray-500">
+              <Calendar size={20} className="text-[#082219]" />
+              <span className="font-bold uppercase tracking-wide text-sm">Price breakdown</span>
             </div>
             <div className="flex flex-col items-end">
-              <span className="text-sm font-bold px-3 py-1 rounded-md" style={{ backgroundColor: brand.copperLight, color: brand.copperHover }}>
+              <span className="text-xs font-black px-3 py-1.5 rounded-lg uppercase tracking-widest bg-[#082219]/5 text-[#082219]">
                 £{discountedPerBag.toFixed(2)} / bag
               </span>
-              <span className="text-xs text-gray-500 mt-1.5 font-semibold">
+              <span className="text-xs text-gray-400 mt-2 font-bold tracking-widest">
                 (£{(discountedPerBag / 10).toFixed(2)} / kg)
               </span>
             </div>
           </div>
         </div>
         
-        <div className="p-6 bg-gray-50 flex flex-col gap-4">
+        <div className="p-6 md:p-8 bg-gray-50 flex flex-col gap-5">
           <div className="flex justify-between items-end">
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">Equivalent to</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black mb-2">Equivalent to</p>
               {savingsPerMonth > 0 && (
-                <div className="inline-block mt-2 px-3 py-1 rounded-full text-sm font-bold shadow-sm" style={{ backgroundColor: brand.greenLight, color: brand.green }}>
-                  Save £{savingsPerMonth.toFixed(2)} / month
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black shadow-sm bg-[#082219] text-[#C5A059] uppercase tracking-wide">
+                  <Sparkles size={12} /> Save £{savingsPerMonth.toFixed(2)} / mo
                 </div>
               )}
             </div>
             <div className="text-right flex items-end gap-3 justify-end">
               {savingsPerMonth > 0 && (
-                <span className="text-xl text-gray-400 line-through mb-1 font-medium">£{normalCost.toFixed(2)}</span>
+                <span className="text-xl text-gray-400 line-through mb-1 font-bold">£{normalCost.toFixed(2)}</span>
               )}
-              <span className="text-4xl font-black text-gray-900 tracking-tight leading-none">£{discountedMonthly.toFixed(2)}</span>
-              <span className="text-gray-500 font-bold mb-1">/mo</span>
+              <span className="text-4xl md:text-5xl font-black text-[#082219] tracking-tighter leading-none">£{discountedMonthly.toFixed(2)}</span>
+              <span className="text-gray-500 font-bold mb-1 uppercase tracking-widest text-xs">/mo</span>
             </div>
           </div>
           
           {billingCycle > 1 && (
-            <div className="border-t border-gray-200 pt-4 mt-2 flex justify-between items-center">
-              <span className="text-sm font-bold text-gray-600">Billed upfront ({billingCycle} months)</span>
-              <span className="text-xl font-black text-gray-900">£{upfrontTotal.toFixed(2)}</span>
+            <div className="border-t border-gray-200 pt-5 mt-2 flex justify-between items-center">
+              <span className="text-xs font-black uppercase tracking-widest text-gray-500">Billed upfront ({billingCycle} mo)</span>
+              <span className="text-2xl font-black text-[#082219]">£{upfrontTotal.toFixed(2)}</span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="pt-4 space-y-3">
+      <div className="pt-6 space-y-4">
         <button
           onClick={handleSubscribe}
           disabled={isProcessing}
-          className="w-full flex justify-center items-center gap-2 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-          style={{ backgroundColor: brand.copper }}
+          className="w-full flex justify-center items-center gap-3 px-8 py-5 rounded-xl font-black uppercase tracking-widest transition-all bg-[#082219] text-[#C5A059] hover:bg-[#C5A059] hover:text-[#082219] shadow-[0_8px_20px_rgba(8,34,25,0.2)] hover:shadow-[0_12px_24px_rgba(197,160,89,0.3)] disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {isProcessing ? (
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-current"></div>
           ) : (
             <>
               <CreditCard size={20} />
@@ -873,7 +857,7 @@ You MUST output ONLY a valid JSON object matching this exact structure:
         </button>
         <button 
           onClick={() => setStep(2)}
-          className="w-full text-center text-gray-500 hover:text-gray-900 py-2 font-semibold transition-colors"
+          className="w-full text-center text-gray-400 hover:text-[#082219] py-3 font-bold uppercase tracking-widest text-sm transition-colors"
         >
           Modify Selection
         </button>
@@ -893,34 +877,34 @@ You MUST output ONLY a valid JSON object matching this exact structure:
 
     return (
       <div className="max-w-xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-        <div className="text-center">
-          <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 shadow-sm" style={{ backgroundColor: brand.greenLight, color: brand.green }}>
-            <CheckCircle size={32} />
+        <div className="text-center mb-10">
+          <div className="mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-lg bg-[#082219] text-[#C5A059]">
+            <CheckCircle size={40} />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Payment Successful!</h2>
-          <p className="text-gray-500 mt-2">Let's schedule your {selectedPickups} monthly {selectedPickups === 1 ? 'pickup' : 'pickups'}.</p>
+          <h2 className="text-3xl md:text-4xl font-black text-[#082219] uppercase italic tracking-tight">Payment Successful!</h2>
+          <p className="text-gray-500 mt-3 font-medium">Let's schedule your {selectedPickups} monthly {selectedPickups === 1 ? 'pickup' : 'pickups'}.</p>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden p-6 space-y-5">
+        <div className="bg-white border border-gray-100 rounded-[1.5rem] shadow-sm overflow-hidden p-6 md:p-8 space-y-6">
            <div>
-             <label className="block text-sm font-bold text-gray-900 mb-2">Select your first pickup date & time</label>
+             <label className="block text-xs font-black uppercase tracking-widest text-[#082219] mb-3">Select your first pickup</label>
              <div className="flex flex-col sm:flex-row gap-3">
                <input 
                  type="date" 
                  min={minDateString}
                  value={pickupDates[0] || ""}
                  onChange={handleFirstDateChange}
-                 className="w-full sm:w-1/2 p-4 border-2 rounded-xl border-gray-200 focus:outline-none focus:ring-0 text-gray-800 font-medium transition-colors"
+                 className="w-full sm:w-1/2 p-4 border-2 rounded-xl focus:outline-none focus:ring-0 font-bold text-gray-800 transition-colors uppercase tracking-wide text-sm"
                  style={{ 
-                   borderColor: pickupDates[0] ? brand.copper : '#e5e7eb',
-                   backgroundColor: pickupDates[0] ? brand.copperLight : 'white'
+                   borderColor: pickupDates[0] ? brand.copper : '#f3f4f6',
+                   backgroundColor: pickupDates[0] ? brand.copperLight : '#f9fafb'
                  }}
                />
                {pickupDates.length > 0 && (
                  <select
                    value={pickupTimes[0] || ""}
                    onChange={(e) => handleTimeChange(0, e.target.value)}
-                   className="w-full sm:w-1/2 p-4 border-2 rounded-xl border-gray-200 focus:outline-none focus:ring-0 text-gray-800 font-medium transition-colors bg-white cursor-pointer"
+                   className="w-full sm:w-1/2 p-4 border-2 rounded-xl focus:outline-none focus:ring-0 font-bold text-gray-800 transition-colors bg-white cursor-pointer uppercase tracking-wide text-sm"
                    style={{ borderColor: brand.copper }}
                  >
                    {timeSlotOptions.map(slot => (
@@ -932,30 +916,30 @@ You MUST output ONLY a valid JSON object matching this exact structure:
            </div>
            
            {pickupDates.length > 0 && selectedPickups > 1 && (
-             <div className="mt-6 pt-6 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                <h4 className="text-sm font-bold text-gray-900 mb-1">Your schedule this month:</h4>
-                <p className="text-xs text-gray-500 mb-4">{getIntervalText()}</p>
+             <div className="mt-8 pt-8 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                <h4 className="text-xs font-black uppercase tracking-widest text-[#082219] mb-2">Your schedule this month:</h4>
+                <p className="text-sm text-gray-500 mb-5 font-medium">{getIntervalText()}</p>
                 <div className="space-y-3">
                   {pickupDates.map((dateStr, idx) => {
                     if (idx === 0) return null;
                     return (
-                      <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 sm:p-3 rounded-xl bg-gray-50 border border-gray-100">
-                        <div className="hidden sm:flex w-8 h-8 rounded-full items-center justify-center text-sm font-bold shadow-sm shrink-0" style={{ backgroundColor: brand.copper, color: 'white' }}>
+                      <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                        <div className="hidden sm:flex w-10 h-10 rounded-full items-center justify-center text-sm font-black shadow-sm shrink-0 bg-[#082219] text-[#C5A059]">
                           {idx + 1}
                         </div>
-                        <div className="flex-1 flex flex-col sm:flex-row gap-2">
+                        <div className="flex-1 flex flex-col sm:flex-row gap-3">
                            <input 
                              type="date"
                              min={pickupDates[idx-1] || minDateString}
                              value={dateStr}
                              onChange={(e) => handleOtherDateChange(idx, e.target.value)}
-                             className="w-full sm:w-1/2 p-3 sm:p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 text-gray-800 font-medium bg-white"
+                             className="w-full sm:w-1/2 p-3 border-2 border-transparent rounded-xl focus:outline-none font-bold text-gray-800 bg-white uppercase tracking-wide text-sm"
                              style={{ outlineColor: brand.copper }}
                            />
                            <select
                              value={pickupTimes[idx] || ""}
                              onChange={(e) => handleTimeChange(idx, e.target.value)}
-                             className="w-full sm:w-1/2 p-3 sm:p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 text-gray-800 font-medium bg-white cursor-pointer"
+                             className="w-full sm:w-1/2 p-3 border-2 border-transparent rounded-xl focus:outline-none font-bold text-gray-800 bg-white cursor-pointer uppercase tracking-wide text-sm"
                              style={{ outlineColor: brand.copper }}
                            >
                              {timeSlotOptions.map(slot => (
@@ -967,9 +951,9 @@ You MUST output ONLY a valid JSON object matching this exact structure:
                     );
                   })}
                 </div>
-                <div className="mt-5 flex gap-3 items-start p-4 rounded-xl shadow-sm" style={{ backgroundColor: brand.greenLight }}>
-                   <Clock size={18} className="shrink-0 mt-0.5" style={{ color: brand.green }} />
-                   <p className="text-xs font-semibold leading-relaxed" style={{ color: brand.green }}>
+                <div className="mt-6 flex gap-3 items-start p-4 rounded-xl shadow-inner bg-[#082219]/5 border border-[#082219]/10">
+                   <Clock size={18} className="shrink-0 mt-0.5 text-[#082219]" />
+                   <p className="text-xs font-bold leading-relaxed text-[#082219]">
                      Don't worry! You can easily change these dates later from your dashboard, up to 48 hours before your scheduled pickup time.
                    </p>
                 </div>
@@ -977,20 +961,20 @@ You MUST output ONLY a valid JSON object matching this exact structure:
            )}
 
            {pickupDates.length > 0 && selectedPickups === 1 && (
-             <div className="mt-4 flex gap-3 items-start p-4 rounded-xl shadow-sm" style={{ backgroundColor: brand.greenLight }}>
-               <Clock size={18} className="shrink-0 mt-0.5" style={{ color: brand.green }} />
-               <p className="text-xs font-semibold leading-relaxed" style={{ color: brand.green }}>
+             <div className="mt-6 flex gap-3 items-start p-4 rounded-xl shadow-inner bg-[#082219]/5 border border-[#082219]/10">
+               <Clock size={18} className="shrink-0 mt-0.5 text-[#082219]" />
+               <p className="text-xs font-bold leading-relaxed text-[#082219]">
                  {getIntervalText()} Don't worry, you can easily reschedule later from your dashboard up to 48 hours before.
                </p>
              </div>
            )}
 
            {pickupDates.length > 0 && (
-             <div className="mt-6 pt-6 border-t border-gray-100 animate-in fade-in duration-500">
-               <div className="flex justify-between items-end mb-4">
+             <div className="mt-8 pt-8 border-t border-gray-100 animate-in fade-in duration-500">
+               <div className="flex justify-between items-end mb-5">
                  <div>
-                   <h4 className="text-sm font-bold text-gray-900">Need anything else on your first pickup?</h4>
-                   <p className="text-xs text-gray-500 mt-1">Add one-off items now with your exclusive subscriber discount.</p>
+                   <h4 className="text-sm font-black uppercase tracking-tight text-[#082219]">Need anything else collected?</h4>
+                   <p className="text-xs text-gray-500 mt-1.5 font-bold">Add one-off items now with your exclusive subscriber discount.</p>
                  </div>
                </div>
                
@@ -1002,24 +986,24 @@ You MUST output ONLY a valid JSON object matching this exact structure:
                      <div 
                        key={upsell.id}
                        onClick={() => toggleUpsell(upsell.id)}
-                       className={`flex items-center justify-between p-3 rounded-xl border-2 cursor-pointer transition-all duration-200 ${isSelected ? 'shadow-sm' : 'border-gray-100 hover:border-gray-200 bg-white'}`}
-                       style={isSelected ? { borderColor: brand.copper, backgroundColor: brand.copperLight } : {}}
+                       className={`flex items-center justify-between p-4 rounded-[1.2rem] border-2 cursor-pointer transition-all duration-300 ${isSelected ? 'shadow-[0_4px_15px_rgba(197,160,89,0.15)] border-[#C5A059]' : 'border-gray-100 hover:border-[#C5A059]/40 bg-white'}`}
+                       style={isSelected ? { backgroundColor: brand.copperLight } : {}}
                      >
-                       <div className="flex items-center gap-3">
-                         <div className={`p-2 rounded-full ${isSelected ? 'bg-white shadow-sm' : 'bg-gray-50 text-gray-400'}`} style={isSelected ? { color: brand.copper } : {}}>
-                           <Icon size={18} />
+                       <div className="flex items-center gap-4">
+                         <div className={`p-3 rounded-xl transition-colors ${isSelected ? 'bg-[#082219] text-[#C5A059] shadow-md' : 'bg-gray-50 text-gray-400'}`}>
+                           <Icon size={20} />
                          </div>
                          <div>
-                           <p className={`font-bold text-sm ${isSelected ? 'text-gray-900' : 'text-gray-700'}`}>{upsell.title}</p>
-                           <div className="flex items-center gap-2 mt-0.5">
-                             <span className="text-xs text-gray-400 line-through">£{upsell.original}</span>
-                             <span className="text-sm font-black" style={{ color: isSelected ? brand.copperHover : brand.green }}>£{upsell.discounted}</span>
+                           <p className={`font-black uppercase tracking-wide text-sm ${isSelected ? 'text-[#082219]' : 'text-gray-600'}`}>{upsell.title}</p>
+                           <div className="flex items-center gap-2 mt-1">
+                             <span className="text-[11px] text-gray-400 line-through font-bold">£{upsell.original}</span>
+                             <span className={`text-sm font-black ${isSelected ? 'text-[#C5A059]' : 'text-[#082219]'}`}>£{upsell.discounted}</span>
                            </div>
                          </div>
                        </div>
                        
-                       <div className={`w-6 h-6 rounded-full flex items-center justify-center border transition-colors ${isSelected ? 'border-transparent text-white' : 'border-gray-300 text-transparent'}`} style={isSelected ? { backgroundColor: brand.copper } : {}}>
-                         {isSelected ? <Check size={14} strokeWidth={3} /> : <Plus size={14} className="text-gray-400" />}
+                       <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isSelected ? 'bg-[#082219] text-[#C5A059]' : 'border-2 border-gray-200 text-gray-300'}`}>
+                         {isSelected ? <Check size={16} strokeWidth={3} /> : <Plus size={16} strokeWidth={3} />}
                        </div>
                      </div>
                    );
@@ -1029,15 +1013,14 @@ You MUST output ONLY a valid JSON object matching this exact structure:
            )}
         </div>
 
-        <div className="pt-2">
+        <div className="pt-6">
           <button
             onClick={handleConfirmSchedule}
             disabled={!isScheduleValid || isProcessingUpsell}
-            className="w-full flex justify-center items-center gap-2 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: brand.copper }}
+            className="w-full flex justify-center items-center gap-3 px-8 py-5 rounded-xl font-black uppercase tracking-widest transition-all bg-[#082219] text-[#C5A059] hover:bg-[#C5A059] hover:text-[#082219] shadow-[0_8px_20px_rgba(8,34,25,0.2)] hover:shadow-[0_12px_24px_rgba(197,160,89,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isProcessingUpsell ? (
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-current"></div>
             ) : (
               <>
                 {selectedUpsells.length > 0 ? `Pay £${upsellTotal.toFixed(2)} & Confirm` : 'Confirm Schedule'} <ArrowRight size={20} />
@@ -1056,28 +1039,28 @@ You MUST output ONLY a valid JSON object matching this exact structure:
     }, 0);
 
     return (
-      <div className="text-center py-10 animate-in zoom-in duration-500 space-y-6">
-        <div className="mx-auto w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-sm" style={{ backgroundColor: brand.greenLight, color: brand.green }}>
+      <div className="text-center py-12 animate-in zoom-in duration-500 space-y-6">
+        <div className="mx-auto w-24 h-24 rounded-full flex items-center justify-center mb-8 shadow-xl bg-[#082219] text-[#C5A059]">
           <CheckCircle size={48} />
         </div>
-        <h2 className="text-3xl font-black text-gray-900 tracking-tight">You're All Set!</h2>
-        <div className="text-gray-600 font-medium max-w-sm mx-auto leading-relaxed space-y-3">
+        <h2 className="text-4xl md:text-5xl font-black text-[#082219] uppercase italic tracking-tight">You're All Set!</h2>
+        <div className="text-gray-600 font-medium max-w-md mx-auto leading-relaxed space-y-4">
           <p>
             Your subscription is active and your first pickup is locked in for <strong>{formatDate(pickupDates[0])}</strong> between <strong>{pickupTimes[0]?.split(' ')[0]}</strong>. We'll send you a reminder beforehand.
           </p>
           {selectedUpsells.length > 0 && (
-            <div className="p-4 mt-4 rounded-xl text-sm shadow-sm border text-left" style={{ backgroundColor: brand.copperLight, borderColor: brand.copper, color: brand.copperHover }}>
-              <div className="flex justify-between items-start mb-3 border-b pb-2" style={{ borderColor: 'rgba(200, 144, 91, 0.2)' }}>
-                <span className="font-black tracking-tight">Separate Order Confirmed</span>
-                <span className="font-bold">£{upsellTotal.toFixed(2)} Paid</span>
+            <div className="p-5 mt-6 rounded-[1.5rem] shadow-sm border border-[#C5A059]/20 text-left bg-[#C5A059]/5">
+              <div className="flex justify-between items-start mb-4 border-b border-[#C5A059]/20 pb-3">
+                <span className="font-black uppercase tracking-widest text-xs text-[#082219]">Separate Order Confirmed</span>
+                <span className="font-black text-[#C5A059]">£{upsellTotal.toFixed(2)} Paid</span>
               </div>
-              <ul className="space-y-1.5">
+              <ul className="space-y-2.5">
                 {selectedUpsells.map(id => {
                   const item = upsellOptions.find(u => u.id === id);
-                  return <li key={id} className="flex items-center gap-2"><Check size={14} /> {item.title}</li>;
+                  return <li key={id} className="flex items-center gap-3 font-bold text-sm text-[#082219]"><Check size={16} className="text-[#C5A059]" /> {item.title}</li>;
                 })}
               </ul>
-              <p className="mt-3 text-xs opacity-90 font-medium">These items will be collected alongside your first scheduled pickup.</p>
+              <p className="mt-4 text-[11px] font-bold text-gray-500 uppercase tracking-widest">Collected alongside your first scheduled pickup.</p>
             </div>
           )}
         </div>
@@ -1092,42 +1075,38 @@ You MUST output ONLY a valid JSON object matching this exact structure:
             setSelectedUpsells([]);
             setIsSuccess(false);
           }}
-          className="mt-8 px-8 py-3 bg-gray-100 text-gray-800 font-bold rounded-full hover:bg-gray-200 transition-colors shadow-sm"
+          className="mt-10 px-8 py-4 bg-gray-100 text-[#082219] font-black uppercase tracking-widest text-sm rounded-xl hover:bg-gray-200 transition-colors shadow-sm inline-flex items-center justify-center"
         >
-          Go to Dashboard (Start Over)
+          Go to Dashboard
         </button>
       </div>
     );
   };
 
   return (
-    <div id="subscription-plans" className="w-full bg-[#FDFDFD] flex flex-col items-center py-12 sm:py-16 px-4 sm:px-8 font-sans border-t border-gray-100">
-      <div className="w-full max-w-4xl bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden p-6 sm:p-10">
+    <div id="subscription-plans" className="w-full bg-white flex flex-col items-center pb-12 sm:pb-16 px-4 sm:px-8 font-sans">
+      <div className="w-full max-w-[1300px] bg-white rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(8,34,25,0.06)] border border-gray-100 overflow-hidden p-6 sm:p-10 lg:p-12 relative z-20">
         
         {(!isSuccess && step < 5) && (
-          <div className="flex justify-center items-center mb-10">
+          <div className="flex justify-center items-center mb-12">
             <div className="flex items-center w-full max-w-lg">
               <div 
-                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ${step >= 1 ? 'text-white' : 'bg-gray-100 text-gray-400'}`}
-                style={step >= 1 ? { backgroundColor: brand.copper } : {}}
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm shadow-sm transition-colors duration-300 ${step >= 1 ? 'bg-[#082219] text-[#C5A059]' : 'bg-gray-100 text-gray-400'}`}
               >1</div>
-              <div className={`flex-1 h-1 mx-1 sm:mx-2 rounded-full ${step >= 2 ? '' : 'bg-gray-100'}`} style={step >= 2 ? { backgroundColor: brand.copper } : {}}></div>
+              <div className={`flex-1 h-1.5 mx-2 rounded-full transition-colors duration-300 ${step >= 2 ? 'bg-[#082219]' : 'bg-gray-100'}`}></div>
               
               <div 
-                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ${step >= 2 ? 'text-white' : 'bg-gray-100 text-gray-400'}`}
-                style={step >= 2 ? { backgroundColor: brand.copper } : {}}
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm shadow-sm transition-colors duration-300 ${step >= 2 ? 'bg-[#082219] text-[#C5A059]' : 'bg-gray-100 text-gray-400'}`}
               >2</div>
-              <div className={`flex-1 h-1 mx-1 sm:mx-2 rounded-full ${step >= 3 ? '' : 'bg-gray-100'}`} style={step >= 3 ? { backgroundColor: brand.copper } : {}}></div>
+              <div className={`flex-1 h-1.5 mx-2 rounded-full transition-colors duration-300 ${step >= 3 ? 'bg-[#082219]' : 'bg-gray-100'}`}></div>
               
               <div 
-                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ${step >= 3 ? 'text-white' : 'bg-gray-100 text-gray-400'}`}
-                style={step >= 3 ? { backgroundColor: brand.copper } : {}}
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm shadow-sm transition-colors duration-300 ${step >= 3 ? 'bg-[#082219] text-[#C5A059]' : 'bg-gray-100 text-gray-400'}`}
               >3</div>
-              <div className={`flex-1 h-1 mx-1 sm:mx-2 rounded-full ${step >= 4 ? '' : 'bg-gray-100'}`} style={step >= 4 ? { backgroundColor: brand.copper } : {}}></div>
+              <div className={`flex-1 h-1.5 mx-2 rounded-full transition-colors duration-300 ${step >= 4 ? 'bg-[#082219]' : 'bg-gray-100'}`}></div>
               
               <div 
-                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ${step >= 4 ? 'text-white' : 'bg-gray-100 text-gray-400'}`}
-                style={step >= 4 ? { backgroundColor: brand.copper } : {}}
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm shadow-sm transition-colors duration-300 ${step >= 4 ? 'bg-[#082219] text-[#C5A059]' : 'bg-gray-100 text-gray-400'}`}
               >4</div>
             </div>
           </div>
@@ -1142,8 +1121,6 @@ You MUST output ONLY a valid JSON object matching this exact structure:
   );
 }
 
-// --- MASTER APP COMPONENT ---
-// This safely loads BOTH components into one seamless page.
 export default function App() {
   return (
     <div className="w-full flex flex-col bg-[#fdfdfd] overflow-x-hidden">
