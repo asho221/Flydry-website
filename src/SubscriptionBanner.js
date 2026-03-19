@@ -488,75 +488,163 @@ function SubscriptionWidget() {
   const isScheduleValid = pickupDates.length === selectedPickups && pickupDates.every(d => d !== "") && pickupTimes.every(t => t !== "");
 
   const renderStep1 = () => (
-    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="text-center mb-10">
-        <h2 className="text-3xl md:text-4xl font-black text-[#082219] uppercase italic tracking-tight">Choose your plan</h2>
-        <p className="text-gray-500 mt-3 font-medium">Select how many bags you need to be serviced per month.</p>
+    <div className="relative space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      {/* --- 3D Coin Flip Physics & Styles --- */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .perspective-1000 { perspective: 1000px; }
+        .preserve-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+
+        @keyframes coin-flip-loop {
+          0%, 42% { transform: rotateY(0deg); }
+          50%, 92% { transform: rotateY(180deg); }
+          100% { transform: rotateY(360deg); }
+        }
+        .animate-coin-flip {
+          animation: coin-flip-loop 10s cubic-bezier(0.6, -0.2, 0.4, 1.2) infinite;
+        }
+
+        @keyframes float-premium {
+          0%, 100% { transform: translateY(0px); filter: drop-shadow(0 15px 25px rgba(0,0,0,0.15)); }
+          50% { transform: translateY(-12px); filter: drop-shadow(0 30px 25px rgba(0,0,0,0.08)); }
+        }
+        .animate-float-premium {
+          animation: float-premium 5s ease-in-out infinite;
+        }
+
+        @keyframes glow-pulse-slow {
+          0%, 100% { opacity: 0.5; transform: scale(0.95); }
+          50% { opacity: 1; transform: scale(1.05); }
+        }
+        .animate-glow-pulse {
+          animation: glow-pulse-slow 4s ease-in-out infinite;
+        }
+
+        @keyframes pedestal-reveal {
+          0% { opacity: 0; transform: scale(0.8) translateY(20px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-pedestal-reveal {
+          animation: pedestal-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}} />
+
+      {/* --- Premium Product Feature Header --- */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-8 bg-gray-50/50 p-6 md:p-8 rounded-[2rem] border border-gray-100">
         
-        {/* Gemini AI Integration */}
-        <div className="mt-8 max-w-xl mx-auto">
-          {!showAiHelper ? (
-            <button 
-              onClick={() => setShowAiHelper(true)}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm transition-all hover:scale-105 border border-[#C5A059]/30 bg-[#C5A059]/10 text-[#a3803e]"
-            >
-              <Sparkles size={16} /> Not sure? Ask our AI
-            </button>
-          ) : (
-            <div className="bg-gray-50 p-5 rounded-[1.5rem] border border-gray-100 text-left animate-in fade-in zoom-in duration-300">
-              <div className="flex items-center gap-2 mb-4">
-                <Bot size={20} className="text-[#082219]" />
-                <span className="font-black text-[#082219] uppercase tracking-widest text-xs">Flydry AI Helper</span>
-              </div>
-              <textarea 
-                value={aiInput}
-                onChange={(e) => {
-                  setAiInput(e.target.value);
-                  setAiRecommendation(null);
-                  setAiError("");
-                }}
-                placeholder="E.g., I live with my partner, we work out a lot and do laundry every 2 weeks..."
-                className="w-full p-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#C5A059] focus:ring-1 focus:ring-[#C5A059] resize-none text-sm font-medium transition-all"
-                rows={2}
-              />
-              {aiError && <p className="text-orange-500 font-bold text-xs mt-2">{aiError}</p>}
-              
-              {aiRecommendation ? (
-                <div className="mt-4 p-5 rounded-xl shadow-sm border border-[#082219]/10 bg-[#082219]/5">
-                  <p className="text-sm font-bold mb-4 text-[#082219]">
-                    <Sparkles size={14} className="inline mr-1.5 text-[#C5A059]" />
-                    {aiRecommendation.reasoning}
-                  </p>
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <span className="font-black text-[#082219] text-sm uppercase tracking-wide">
-                      Recommendation: {aiRecommendation.bags} Bags, {aiRecommendation.pickups} Pickups
-                    </span>
+        {/* Left: Text & AI Assistant */}
+        <div className="flex-1 text-center md:text-left w-full">
+          <h2 className="text-3xl md:text-4xl font-black text-[#082219] uppercase italic tracking-tight">Choose your plan</h2>
+          <p className="text-gray-500 mt-3 font-medium">Select how many of our Signature Totes you need serviced per month.</p>
+          
+          {/* Gemini AI Integration */}
+          <div className="mt-8 w-full max-w-md mx-auto md:mx-0">
+            {!showAiHelper ? (
+              <button 
+                onClick={() => setShowAiHelper(true)}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm transition-all hover:scale-105 border border-[#C5A059]/30 bg-[#C5A059]/10 text-[#a3803e]"
+              >
+                <Sparkles size={16} /> Not sure? Ask our AI
+              </button>
+            ) : (
+              <div className="bg-white p-5 rounded-[1.5rem] border border-gray-200 text-left animate-in fade-in zoom-in duration-300 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <Bot size={20} className="text-[#082219]" />
+                  <span className="font-black text-[#082219] uppercase tracking-widest text-xs">Flydry AI Helper</span>
+                </div>
+                <textarea 
+                  value={aiInput}
+                  onChange={(e) => {
+                    setAiInput(e.target.value);
+                    setAiRecommendation(null);
+                    setAiError("");
+                  }}
+                  placeholder="E.g., I live with my partner, we work out a lot and do laundry every 2 weeks..."
+                  className="w-full p-4 rounded-xl border border-gray-200 focus:outline-none focus:border-[#C5A059] focus:ring-1 focus:ring-[#C5A059] resize-none text-sm font-medium transition-all"
+                  rows={2}
+                />
+                {aiError && <p className="text-orange-500 font-bold text-xs mt-2">{aiError}</p>}
+                
+                {aiRecommendation ? (
+                  <div className="mt-4 p-5 rounded-xl shadow-sm border border-[#082219]/10 bg-[#082219]/5">
+                    <p className="text-sm font-bold mb-4 text-[#082219]">
+                      <Sparkles size={14} className="inline mr-1.5 text-[#C5A059]" />
+                      {aiRecommendation.reasoning}
+                    </p>
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <span className="font-black text-[#082219] text-sm uppercase tracking-wide">
+                        Recommendation: {aiRecommendation.bags} Bags, {aiRecommendation.pickups} Pickups
+                      </span>
+                      <button 
+                        onClick={applyAiRecommendation}
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#082219] text-[#C5A059] text-xs font-black uppercase tracking-widest transition-all hover:bg-[#C5A059] hover:text-[#082219] shadow-[0_4px_10px_rgba(8,34,25,0.15)]"
+                      >
+                        Apply Plan
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-end mt-4">
                     <button 
-                      onClick={applyAiRecommendation}
-                      className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#082219] text-[#C5A059] text-xs font-black uppercase tracking-widest transition-all hover:bg-[#C5A059] hover:text-[#082219] shadow-[0_4px_10px_rgba(8,34,25,0.15)]"
+                      onClick={getAiRecommendation}
+                      disabled={isAiLoading || !aiInput.trim()}
+                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#082219] text-[#C5A059] text-xs font-black uppercase tracking-widest disabled:opacity-50 transition-all hover:bg-[#C5A059] hover:text-[#082219] shadow-[0_4px_10px_rgba(8,34,25,0.15)]"
                     >
-                      Apply Plan
+                      {isAiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                      {isAiLoading ? "Thinking..." : "Get Recommendation"}
                     </button>
                   </div>
-                </div>
-              ) : (
-                <div className="flex justify-end mt-4">
-                  <button 
-                    onClick={getAiRecommendation}
-                    disabled={isAiLoading || !aiInput.trim()}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#082219] text-[#C5A059] text-xs font-black uppercase tracking-widest disabled:opacity-50 transition-all hover:bg-[#C5A059] hover:text-[#082219] shadow-[0_4px_10px_rgba(8,34,25,0.15)]"
-                  >
-                    {isAiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                    {isAiLoading ? "Thinking..." : "Get Recommendation"}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Right: The 3D Rotating Coin */}
+        <div className="w-full md:w-auto flex justify-center shrink-0">
+           <div className="relative w-48 h-48 md:w-56 md:h-56 perspective-1000 animate-pedestal-reveal mt-4 md:mt-0">
+              
+              {/* FIXED: Float wrapper (separated from coin flip to prevent CSS animation override) */}
+              <div className="w-full h-full animate-float-premium">
+                
+                {/* 3D Coin Container */}
+                <div className="w-full h-full relative preserve-3d animate-coin-flip group">
+                   
+                   {/* FRONT FACE: The Bag */}
+                   <div className="absolute inset-0 backface-hidden bg-white rounded-full border border-gray-100 shadow-inner flex items-center justify-center p-6">
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(197,160,89,0.15)_0%,transparent_70%)] rounded-full animate-glow-pulse pointer-events-none"></div>
+                      <img 
+                        src="https://raw.githubusercontent.com/asho221/Flydry-website/main/FDbag.png" 
+                        alt="Flydry Signature Bag" 
+                        className="w-full h-full object-contain relative z-10 group-hover:scale-110 transition-transform duration-700"
+                      />
+                   </div>
+
+                   {/* BACK FACE: The Specs Card */}
+                   <div className="absolute inset-0 backface-hidden bg-[#082219] rounded-full border-4 border-[#0a2b20] shadow-[inset_0_10px_30px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center p-6 rotate-y-180 overflow-hidden">
+                      {/* Inner glowing accent for the backface */}
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(197,160,89,0.2)_0%,transparent_70%)] rounded-full pointer-events-none"></div>
+                      
+                      <ShoppingBag size={24} className="text-[#C5A059] mb-2 relative z-10" />
+                      <span className="text-[#C5A059] text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] mb-1 relative z-10">Capacity</span>
+                      <span className="text-4xl md:text-5xl font-black text-white leading-none relative z-10 tracking-tighter">10KG</span>
+                      
+                      <div className="w-10 h-px bg-white/20 my-3 relative z-10"></div>
+                      
+                      <span className="text-[10px] md:text-xs text-gray-300 font-bold uppercase tracking-widest leading-tight text-center relative z-10">Holds ~40 Items</span>
+                      <span className="text-[8px] md:text-[9px] text-[#C5A059] font-black uppercase tracking-widest mt-2 relative z-10">Water-Resistant</span>
+                   </div>
+
+                </div>
+              </div>
+           </div>
+        </div>
+        
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10">
         {[1, 2, 4].map((bagCount) => {
           const minPrice = Math.min(...Object.values(pricingData[bagCount]).map(p => p.total));
           
@@ -687,19 +775,21 @@ function SubscriptionWidget() {
       </div>
 
       <div className="bg-white border rounded-[1.5rem] overflow-hidden shadow-sm border-gray-100">
-        <div className="h-56 bg-gray-100 w-full relative overflow-hidden">
+        <div className="h-64 bg-gray-50 w-full relative overflow-hidden flex items-center justify-center p-8">
+            {/* Radial glow behind the bag for a premium studio feel */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(197,160,89,0.1)_0%,transparent_70%)]"></div>
             <img 
-              src="/flydry-bag.jpg" 
+              src="https://raw.githubusercontent.com/asho221/Flydry-website/main/FDbag.png" 
               alt="Flydry Wash & Fold Bag" 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain relative z-10 hover:scale-105 transition-transform duration-700 drop-shadow-xl"
               onError={(e) => { 
                 e.target.onerror = null; 
                 e.target.src = "https://images.unsplash.com/photo-1550963295-019d8a8a61c5?auto=format&fit=crop&q=80&w=800"; 
                 e.target.className = "w-full h-full object-cover opacity-80 mix-blend-luminosity";
               }}
             />
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-gradient-to-t from-black/40 to-transparent">
-              <span className="text-[#C5A059] px-6 py-3 rounded-xl font-black bg-[#082219]/90 backdrop-blur-md shadow-2xl border border-[#C5A059]/20 uppercase tracking-[0.2em] text-xs">
+            <div className="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none z-20">
+              <span className="text-[#C5A059] px-6 py-2 rounded-xl font-black bg-[#082219]/90 backdrop-blur-md shadow-2xl border border-[#C5A059]/20 uppercase tracking-[0.2em] text-[10px]">
                 Holds ~10kg
               </span>
             </div>
