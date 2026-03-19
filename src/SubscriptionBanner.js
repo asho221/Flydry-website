@@ -492,15 +492,27 @@ function SubscriptionWidget() {
       
       {/* --- 3D Coin Flip Physics & Styles --- */}
       <style dangerouslySetInnerHTML={{__html: `
-        .perspective-1000 { perspective: 1000px; }
-        .preserve-3d { transform-style: preserve-3d; }
-        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-        .rotate-y-180 { transform: rotateY(180deg); }
+        .perspective-1000 { perspective: 1000px; -webkit-perspective: 1000px; }
+        .preserve-3d { transform-style: preserve-3d; -webkit-transform-style: preserve-3d; }
+        
+        /* iOS Safari Fixes for 3D Flipping bleed-through */
+        .coin-front {
+          backface-visibility: hidden; 
+          -webkit-backface-visibility: hidden;
+          transform: rotateY(0deg) translateZ(2px);
+          -webkit-transform: rotateY(0deg) translateZ(2px);
+        }
+        .coin-back {
+          backface-visibility: hidden; 
+          -webkit-backface-visibility: hidden;
+          transform: rotateY(180deg) translateZ(2px);
+          -webkit-transform: rotateY(180deg) translateZ(2px);
+        }
 
         @keyframes coin-flip-loop {
-          0%, 42% { transform: rotateY(0deg); }
-          50%, 92% { transform: rotateY(180deg); }
-          100% { transform: rotateY(360deg); }
+          0%, 42% { transform: rotateY(0deg); -webkit-transform: rotateY(0deg); }
+          50%, 92% { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
+          100% { transform: rotateY(360deg); -webkit-transform: rotateY(360deg); }
         }
         .animate-coin-flip {
           animation: coin-flip-loop 10s cubic-bezier(0.6, -0.2, 0.4, 1.2) infinite;
@@ -604,7 +616,8 @@ function SubscriptionWidget() {
 
         {/* Right: The 3D Rotating Coin */}
         <div className="w-full md:w-auto flex justify-center shrink-0">
-           <div className="relative w-48 h-48 md:w-56 md:h-56 perspective-1000 animate-pedestal-reveal mt-4 md:mt-0">
+           {/* Added mt-12 mb-4 for mobile spacing to prevent overlap with the text above */}
+           <div className="relative w-48 h-48 md:w-56 md:h-56 perspective-1000 animate-pedestal-reveal mt-12 mb-4 md:mt-0 md:mb-0">
               
               {/* FIXED: Float wrapper (separated from coin flip to prevent CSS animation override) */}
               <div className="w-full h-full animate-float-premium">
@@ -613,7 +626,7 @@ function SubscriptionWidget() {
                 <div className="w-full h-full relative preserve-3d animate-coin-flip group">
                    
                    {/* FRONT FACE: The Bag */}
-                   <div className="absolute inset-0 backface-hidden bg-white rounded-full border border-gray-100 shadow-inner flex items-center justify-center p-6">
+                   <div className="absolute inset-0 coin-front bg-white rounded-full border border-gray-100 shadow-inner flex items-center justify-center p-6">
                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(197,160,89,0.15)_0%,transparent_70%)] rounded-full animate-glow-pulse pointer-events-none"></div>
                       <img 
                         src="https://raw.githubusercontent.com/asho221/Flydry-website/main/FDbag.png" 
@@ -623,7 +636,7 @@ function SubscriptionWidget() {
                    </div>
 
                    {/* BACK FACE: The Specs Card */}
-                   <div className="absolute inset-0 backface-hidden bg-[#082219] rounded-full border-4 border-[#0a2b20] shadow-[inset_0_10px_30px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center p-6 rotate-y-180 overflow-hidden">
+                   <div className="absolute inset-0 coin-back bg-[#082219] rounded-full border-4 border-[#0a2b20] shadow-[inset_0_10px_30px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center p-6 overflow-hidden">
                       {/* Inner glowing accent for the backface */}
                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(197,160,89,0.2)_0%,transparent_70%)] rounded-full pointer-events-none"></div>
                       
