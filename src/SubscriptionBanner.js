@@ -541,6 +541,10 @@ function SubscriptionWidget() {
         .animate-pedestal-reveal {
           animation: pedestal-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
+
+        /* Hide scrollbar for the new mobile carousel */
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
 
       {/* --- Premium Product Feature Header --- */}
@@ -657,7 +661,8 @@ function SubscriptionWidget() {
         
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10">
+      {/* CONVERTED TO SLEEK HORIZONTAL MOBILE CAROUSEL */}
+      <div className="flex md:grid flex-nowrap overflow-x-auto md:overflow-visible md:grid-cols-3 gap-4 md:gap-5 relative z-10 pb-6 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory hide-scroll">
         {[1, 2, 4].map((bagCount) => {
           const minPrice = Math.min(...Object.values(pricingData[bagCount]).map(p => p.total));
           
@@ -665,10 +670,10 @@ function SubscriptionWidget() {
           <button
             key={bagCount}
             onClick={() => handleBagSelect(bagCount)}
-            className={`group flex flex-col items-center justify-center p-6 border transition-all duration-300 rounded-[1.5rem]
+            className={`w-[85vw] sm:w-[320px] md:w-auto shrink-0 snap-center group flex flex-col items-center justify-center p-6 border transition-all duration-300 rounded-[1.5rem]
               ${selectedBags === bagCount 
-                ? 'shadow-[0_12px_24px_rgba(197,160,89,0.15)] transform scale-[1.02] border-[#C5A059]' 
-                : 'border-gray-100 bg-white hover:border-[#C5A059] hover:bg-[#C5A059]/5 hover:scale-[1.02] hover:shadow-lg'}`}
+                ? 'shadow-[0_12px_24px_rgba(197,160,89,0.15)] transform md:scale-[1.02] border-[#C5A059]' 
+                : 'border-gray-100 bg-white hover:border-[#C5A059] hover:bg-[#C5A059]/5 md:hover:scale-[1.02] hover:shadow-lg'}`}
             style={selectedBags === bagCount ? { backgroundColor: brand.copperLight } : {}}
           >
             {/* Dynamic Bag Stacking based on plan size */}
