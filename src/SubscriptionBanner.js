@@ -1,4 +1,4 @@
-import React, { useState, useId, useMemo } from 'react';
+import React, { useState, useId, useMemo, useEffect } from 'react';
 import {
   ShoppingBag, Truck, CreditCard, CheckCircle,
   CheckCircle2, ArrowRight, ArrowLeft, Sparkles, Bot,
@@ -48,7 +48,7 @@ const useKeyboardAction = (callback) => {
   };
 };
 
-// --- 3. ENHANCED HERO ---
+// --- 3. HERO ---
 function SubscriptionHero({ onStart }) {
   const bagClipId = useId();
 
@@ -123,8 +123,6 @@ function SubscriptionHero({ onStart }) {
         .anim-drop { animation: drop-fold 4s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
         @keyframes sparkle-fade { 0%, 100% { opacity: 0; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
         .anim-sparkle { animation: sparkle-fade 2s ease-in-out infinite; transform-origin: center; }
-        @keyframes soft-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-        .anim-soft-pulse { animation: soft-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes travel {
           0% { left: 0%; opacity: 0; transform: scaleX(0.5); }
           10%, 90% { opacity: 1; transform: scaleX(1); }
@@ -223,7 +221,7 @@ function SubscriptionHero({ onStart }) {
   );
 }
 
-// --- 4. PLAN FINDER (enhanced AI helper) ---
+// --- 4. PLAN FINDER ---
 function PlanFinder({ onApply }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -358,6 +356,13 @@ export default function App() {
   const [postCodeError, setPostCodeError] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
 
+  // Auto-scroll to top whenever step changes (for the new "page-like" feel)
+  useEffect(() => {
+    if (step > 1 || isSuccess) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [step, isSuccess]);
+
   const currentPlan = (selectedBags && selectedPickups) ? CONFIG.PRICING_DATA[selectedBags][selectedPickups] : null;
   const standardPrice = (selectedBags && selectedPickups) ? (selectedBags * CONFIG.BAG_WEIGHT_KG * CONFIG.STANDARD_PRICE_PER_KG) + (selectedPickups * CONFIG.STANDARD_DELIVERY_FEE) : 0;
   const currentDiscount = CONFIG.DISCOUNTS[billingCycle];
@@ -372,6 +377,13 @@ export default function App() {
   const handleSelect = (setter, val, nextStep) => {
     setter(val);
     if (nextStep) setStep(nextStep);
+  };
+
+  const handleStartOver = () => {
+    setStep(1);
+    setSelectedBags(null);
+    setSelectedDetergent(null);
+    setSelectedPickups(null);
   };
 
   const validateForm = () => {
@@ -438,7 +450,7 @@ export default function App() {
 
   const scrollToPlans = () => document.getElementById('subscription-plans')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  // --- STEP 1: Premium Plan Selection with 3D Coin Flip + Mobile Carousel ---
+  // --- STEP 1 ---
   const renderStep1 = () => (
     <div className="relative space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <style dangerouslySetInnerHTML={{__html: `
@@ -460,25 +472,21 @@ export default function App() {
           100% { transform: rotateY(360deg); }
         }
         .animate-coin-flip { animation: coin-flip-loop 10s cubic-bezier(0.6, -0.2, 0.4, 1.2) infinite; }
-
         @keyframes float-premium {
           0%, 100% { transform: translateY(0px); filter: drop-shadow(0 15px 25px rgba(0,0,0,0.15)); }
           50% { transform: translateY(-12px); filter: drop-shadow(0 30px 25px rgba(0,0,0,0.08)); }
         }
         .animate-float-premium { animation: float-premium 5s ease-in-out infinite; }
-
         @keyframes glow-pulse-slow {
           0%, 100% { opacity: 0.5; transform: scale(0.95); }
           50% { opacity: 1; transform: scale(1.05); }
         }
         .animate-glow-pulse { animation: glow-pulse-slow 4s ease-in-out infinite; }
-
         @keyframes pedestal-reveal {
           0% { opacity: 0; transform: scale(0.8) translateY(20px); }
           100% { opacity: 1; transform: scale(1) translateY(0); }
         }
         .animate-pedestal-reveal { animation: pedestal-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
@@ -518,7 +526,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* 3D Coin Flip */}
         <div className="w-full md:w-auto flex justify-center shrink-0">
           <div className="relative w-48 h-48 md:w-56 md:h-56 perspective-1000 animate-pedestal-reveal mt-12 mb-4 md:mt-0 md:mb-0">
             <div className="w-full h-full animate-float-premium">
@@ -546,7 +553,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Bag Plan Cards (mobile carousel + desktop grid) */}
       <div className="flex md:grid flex-nowrap overflow-x-auto md:overflow-visible md:grid-cols-3 gap-4 md:gap-5 relative z-10 pb-6 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory hide-scroll">
         {[1, 2, 4].map((bagCount) => {
           const minPrice = Math.min(...Object.values(CONFIG.PRICING_DATA[bagCount]).map(p => p.total));
@@ -562,7 +568,6 @@ export default function App() {
                   : 'border-gray-100 bg-white hover:border-[#C5A059] hover:bg-[#C5A059]/5 md:hover:scale-[1.02] hover:shadow-lg'}`}
               style={isSelected ? { backgroundColor: brand.copperLight } : {}}
             >
-              {/* Dynamic Bag Stacking */}
               <div className="flex items-center justify-center h-16 mb-4">
                 {Array.from({ length: bagCount }).map((_, i) => (
                   <div
@@ -622,7 +627,7 @@ export default function App() {
     </div>
   );
 
-  // --- STEP 2: Detergent Selection ---
+  // --- STEP 2 ---
   const renderStep2 = () => {
     const opts = [
       { id: 'bio', title: 'Premium Bio', desc: 'Tough on stains & odors', icon: Sparkles, recommended: true },
@@ -670,7 +675,7 @@ export default function App() {
     );
   };
 
-  // --- STEP 3: Pickup Frequency (enhanced with per-kg pricing) ---
+  // --- STEP 3 ---
   const renderStep3 = () => {
     const pickupOptions = Object.keys(CONFIG.PRICING_DATA[selectedBags]).map(Number);
     return (
@@ -738,7 +743,7 @@ export default function App() {
     );
   };
 
-  // --- STEP 4: Order Summary + Customer Details ---
+  // --- STEP 4 ---
   const renderStep4 = () => (
     <div className="max-w-xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center mb-10">
@@ -859,7 +864,6 @@ export default function App() {
         )}
       </div>
 
-      {/* Guarantee Block */}
       <div className="w-full bg-gray-50 border border-[#C5A059]/40 rounded-[1.2rem] p-6 mt-6 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 left-0 w-1 h-full bg-[#C5A059]" />
         {useTrial && (
@@ -876,7 +880,6 @@ export default function App() {
         </ul>
       </div>
 
-      {/* Customer Details */}
       <div className="bg-white border-2 border-gray-100 rounded-[1.5rem] overflow-hidden relative p-6 md:p-8 shadow-sm">
         <h3 className="text-[#082219] font-black uppercase tracking-widest text-lg mb-1">Your Details</h3>
         <p className="text-gray-500 text-sm mb-6">We'll use this to set up your account and schedule pickups.</p>
@@ -915,7 +918,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* First Pickup */}
       <div className="bg-white border-2 border-gray-100 rounded-[1.5rem] overflow-hidden relative p-6 md:p-8 shadow-sm">
         <h3 className="text-[#082219] font-black uppercase tracking-widest text-lg mb-1">First Pickup</h3>
         <p className="text-gray-500 text-sm mb-6">When should we collect your first bag?</p>
@@ -991,11 +993,37 @@ export default function App() {
     </div>
   );
 
+  const showHero = step === 1 && !isSuccess;
+
   return (
-    <div className="w-full flex flex-col bg-[#fdfdfd] overflow-x-hidden font-sans">
-      <SubscriptionHero onStart={scrollToPlans} />
-      <div id="subscription-plans" className="w-full bg-white flex flex-col items-center pb-12 sm:pb-16 px-4 sm:px-8">
+    <div className="w-full flex flex-col bg-[#fdfdfd] overflow-x-hidden font-sans min-h-screen">
+      {showHero && <SubscriptionHero onStart={scrollToPlans} />}
+
+      <div
+        id="subscription-plans"
+        className={`w-full bg-white flex flex-col items-center px-4 sm:px-8 ${
+          showHero ? 'pb-12 sm:pb-16' : 'min-h-screen pt-8 sm:pt-12 pb-12 sm:pb-16'
+        }`}
+      >
         <div className="w-full max-w-[1300px] bg-white rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(8,34,25,0.06)] border border-gray-100 overflow-hidden p-6 sm:p-10 lg:p-12 relative z-20">
+
+          {!showHero && !isSuccess && (
+            <div className="flex justify-between items-center mb-8 pb-6 border-b border-gray-100">
+              <button
+                onClick={handleStartOver}
+                className="flex items-center gap-2 text-[#082219] font-black uppercase tracking-widest text-xs hover:text-[#C5A059] transition-colors"
+              >
+                <ArrowLeft size={14} /> Start Over
+              </button>
+              <span className="text-[#082219] font-black uppercase italic tracking-tight text-lg">
+                {CONFIG.BRAND_NAME}
+              </span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                Step {step} of 4
+              </span>
+            </div>
+          )}
+
           {!isSuccess && step < 5 && (
             <div className="flex justify-center items-center mb-12">
               <div className="flex items-center w-full max-w-lg">
