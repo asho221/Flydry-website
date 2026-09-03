@@ -134,7 +134,8 @@ export default function HeroSection() {
 
             {/* TWO EQUAL AUDIENCE CARDS */}
             <div className="blur-reveal-wrapper">
-              <div className="blur-reveal delay-500 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
+              <div className="blur-reveal delay-500">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
 
                 {/* Card 1 — Home */}
                 <div className="audience-card relative bg-white border border-[#082219]/10 rounded-[1.25rem] p-6 flex flex-col gap-4 shadow-[0_10px_30px_-15px_rgba(8,34,25,0.15)]">
@@ -202,6 +203,7 @@ export default function HeroSection() {
                   </div>
                 </div>
 
+              </div>
               </div>
             </div>
           </div>
